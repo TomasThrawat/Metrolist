@@ -135,7 +135,7 @@ fun PlayerSettings(
 
     val (audioOffload, onAudioOffloadChange) = rememberPreference(
         key = AudioOffload,
-        defaultValue = false
+        defaultValue = true
     )
 
     val (audioTrackPlaybackParams, onAudioTrackPlaybackParamsChange) = rememberPreference(
@@ -172,7 +172,7 @@ fun PlayerSettings(
     )
     val (autoDownloadOnLike, onAutoDownloadOnLikeChange) = rememberPreference(
         AutoDownloadOnLikeKey,
-        defaultValue = false
+        defaultValue = true
     )
     val (similarContentEnabled, similarContentEnabledChange) = rememberPreference(
         key = SimilarContent,
