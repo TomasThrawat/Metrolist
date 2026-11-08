@@ -29,7 +29,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -136,20 +135,13 @@ import com.metrolist.innertube.models.WatchEndpoint
 import com.metrolist.music.constants.AppBarHeight
 import com.metrolist.music.constants.AppLanguageKey
 import com.metrolist.music.constants.CheckForUpdatesKey
-import com.metrolist.music.constants.DarkModeKey
 import com.metrolist.music.constants.DefaultOpenTabKey
 import com.metrolist.music.constants.DismissedKmpUpdateKey
 import com.metrolist.music.constants.DismissedStandaloneUpdateKey
-import com.metrolist.music.constants.DensityScaleKey
 import com.metrolist.music.constants.DisableScreenshotKey
-import com.metrolist.music.constants.DynamicThemeKey
-import com.metrolist.music.constants.EnableHighRefreshRateKey
-import com.metrolist.music.constants.EnableLandscapeScalingKey
 import com.metrolist.music.constants.ExperimentalLyricsKey
 import com.metrolist.music.constants.ForceBottomNavBarKey
 import com.metrolist.music.constants.LastSeenVersionKey
-import com.metrolist.music.constants.ListenTogetherInTopBarKey
-import com.metrolist.music.constants.ListenTogetherUsernameKey
 import com.metrolist.music.constants.LyricsProviderOrderKey
 import com.metrolist.music.constants.MiniPlayerBottomSpacing
 import com.metrolist.music.constants.MiniPlayerHeight
@@ -159,9 +151,7 @@ import com.metrolist.music.constants.PauseListenHistoryKey
 import com.metrolist.music.constants.PauseSearchHistoryKey
 import com.metrolist.music.constants.PreferredLyricsProvider
 import com.metrolist.music.constants.PreferredLyricsProviderKey
-import com.metrolist.music.constants.PureBlackKey
 import com.metrolist.music.constants.SYSTEM_DEFAULT
-import com.metrolist.music.constants.SelectedThemeColorKey
 import com.metrolist.music.constants.SimpMusicMigrationDoneKey
 import com.metrolist.music.constants.SlimNavBarHeight
 import com.metrolist.music.constants.SlimNavBarKey
@@ -195,10 +185,7 @@ import com.metrolist.music.ui.screens.navigationBuilder
 import com.metrolist.music.ui.screens.settings.ChangelogScreen
 import com.metrolist.music.ui.screens.settings.DarkMode
 import com.metrolist.music.ui.screens.settings.NavigationTab
-import com.metrolist.music.ui.theme.ColorSaver
-import com.metrolist.music.ui.theme.DefaultThemeColor
 import com.metrolist.music.ui.theme.MetrolistTheme
-import com.metrolist.music.ui.theme.extractThemeColor
 import com.metrolist.music.ui.utils.appBarScrollBehavior
 import com.metrolist.music.ui.utils.resetHeightOffset
 import com.metrolist.music.utils.ReleaseInfo
@@ -258,9 +245,6 @@ class MainActivity : FragmentActivity() {
     @Inject
     lateinit var syncUtils: SyncUtils
 
-    @Inject
-    lateinit var listenTogetherManager: com.metrolist.music.listentogether.ListenTogetherManager
-
     private lateinit var navController: NavHostController
     private var pendingIntent: Intent? = null
     private var latestVersionName by mutableStateOf(BuildConfig.BASE_VERSION_NAME)
@@ -283,13 +267,10 @@ class MainActivity : FragmentActivity() {
                 if (service is MusicBinder) {
                     playerConnection = PlayerConnection(this@MainActivity, service, database, lifecycleScope)
                     playerConnectionSnapshot = playerConnection
-                    listenTogetherManager.setPlayerConnection(playerConnection)
                 }
             }
 
             override fun onServiceDisconnected(name: ComponentName?) {
-                // Disconnect Listen Together manager
-                listenTogetherManager.setPlayerConnection(null)
                 playerConnection?.dispose()
                 // DO NOT null out playerConnection here - keep it for when service reconnects
                 // DO NOT update playerConnectionSnapshot - this is the key to preventing recomposition
@@ -304,7 +285,6 @@ class MainActivity : FragmentActivity() {
             Timber.tag("MainActivity").w(e, "Service was not bound when attempting to unbind in $source")
         } finally {
             isServiceBound = false
-            listenTogetherManager.setPlayerConnection(null)
             playerConnection?.dispose()
             // DO NOT null out playerConnection here - keep it for reconnection
             // DO NOT update playerConnectionSnapshot - this prevents UI recomposition
@@ -360,9 +340,6 @@ class MainActivity : FragmentActivity() {
     }
 
     override fun onDestroy() {
-        if (isFinishing) {
-            listenTogetherManager.disconnect()
-        }
         super.onDestroy()
         val stopServiceOnClear = dataStore.get(StopMusicOnTaskClearKey, false) && isFinishing
 
@@ -395,9 +372,6 @@ class MainActivity : FragmentActivity() {
         super.onCreate(savedInstanceState)
         window.decorView.layoutDirection = View.LAYOUT_DIRECTION_LTR
         WindowCompat.setDecorFitsSystemWindows(window, false)
-
-        // Initialize Listen Together manager
-        listenTogetherManager.initialize()
 
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
             val locale =
@@ -566,9 +540,8 @@ class MainActivity : FragmentActivity() {
             }
         }
 
-        val enableDynamicTheme by rememberPreference(DynamicThemeKey, defaultValue = true)
-        val enableHighRefreshRate by rememberPreference(EnableHighRefreshRateKey, defaultValue = true)
-
+        // Personal build: fixed monochrome dark theme and a 60Hz display-mode request.
+        val enableHighRefreshRate = false
         LaunchedEffect(enableHighRefreshRate) {
             val window = this@MainActivity.window
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -576,108 +549,22 @@ class MainActivity : FragmentActivity() {
                 if (enableHighRefreshRate) {
                     layoutParams.preferredDisplayModeId = 0
                 } else {
-                    val modes = window.windowManager.defaultDisplay.supportedModes
-                    val mode60 =
-                        modes.firstOrNull { kotlin.math.abs(it.refreshRate - 60f) < 1f }
-                            ?: modes.minByOrNull { kotlin.math.abs(it.refreshRate - 60f) }
-
-                    if (mode60 != null) {
-                        layoutParams.preferredDisplayModeId = mode60.modeId
-                    }
+                    val modes = window.decorView.display?.supportedModes.orEmpty()
+                    val mode60 = modes.firstOrNull { kotlin.math.abs(it.refreshRate - 60f) < 1f }
+                        ?: modes.minByOrNull { kotlin.math.abs(it.refreshRate - 60f) }
+                    if (mode60 != null) layoutParams.preferredDisplayModeId = mode60.modeId
                 }
                 window.attributes = layoutParams
             } else {
                 val params = window.attributes
-                if (enableHighRefreshRate) {
-                    params.preferredRefreshRate = 0f
-                } else {
-                    params.preferredRefreshRate = 60f
-                }
+                params.preferredRefreshRate = 60f
                 window.attributes = params
             }
         }
-
-        val darkTheme by rememberEnumPreference(DarkModeKey, defaultValue = DarkMode.AUTO)
-        val isSystemInDarkTheme = isSystemInDarkTheme()
-        val useDarkTheme =
-            remember(darkTheme, isSystemInDarkTheme) {
-                if (darkTheme == DarkMode.AUTO) isSystemInDarkTheme else darkTheme == DarkMode.ON
-            }
-
-        LaunchedEffect(useDarkTheme) {
-            setSystemBarAppearance(useDarkTheme)
-        }
-
-        val enableLandscapeScaling by rememberPreference(EnableLandscapeScalingKey, defaultValue = false)
-        val userDensityScale by rememberPreference(DensityScaleKey, defaultValue = 1f)
-        val pureBlackEnabled by rememberPreference(PureBlackKey, defaultValue = false)
-        val pureBlack =
-            remember(pureBlackEnabled, useDarkTheme) {
-                pureBlackEnabled && useDarkTheme
-            }
-
-        val (selectedThemeColorInt) = rememberPreference(SelectedThemeColorKey, defaultValue = DefaultThemeColor.toArgb())
-        val selectedThemeColor = Color(selectedThemeColorInt)
-
-        val showChangelog = rememberSaveable { mutableStateOf(false) }
-
-        var themeColor by rememberSaveable(stateSaver = ColorSaver) {
-            mutableStateOf(selectedThemeColor)
-        }
-
-        val themeColorCache = remember { mutableMapOf<String, Color>() }
-
-        LaunchedEffect(selectedThemeColor) {
-            if (!enableDynamicTheme) {
-                themeColor = selectedThemeColor
-            }
-        }
-
-        LaunchedEffect(playerConnection, enableDynamicTheme, selectedThemeColor) {
-            val playerConnection = playerConnection
-            if (!enableDynamicTheme || playerConnection == null) {
-                themeColor = selectedThemeColor
-                return@LaunchedEffect
-            }
-
-            playerConnection.service.currentMediaMetadata
-                .distinctUntilChanged { old, new -> old?.id == new?.id }
-                .collectLatest { song ->
-                    if (song?.thumbnailUrl != null) {
-                        val cached = themeColorCache[song.thumbnailUrl]
-                        if (cached != null) {
-                            withFrameNanos { }
-                            themeColor = cached
-                            return@collectLatest
-                        }
-                        withContext(Dispatchers.IO) {
-                            try {
-                                val result =
-                                    imageLoader.execute(
-                                        ImageRequest
-                                            .Builder(this@MainActivity)
-                                            .data(song.thumbnailUrl)
-                                            .allowHardware(false)
-                                            .memoryCachePolicy(CachePolicy.ENABLED)
-                                            .diskCachePolicy(CachePolicy.ENABLED)
-                                            .networkCachePolicy(CachePolicy.ENABLED)
-                                            .crossfade(false)
-                                            .build(),
-                                    )
-                                val extractedColor = result.image?.toBitmap()?.extractThemeColor() ?: selectedThemeColor
-                                themeColorCache[song.thumbnailUrl] = extractedColor
-                                withFrameNanos { }
-                                themeColor = extractedColor
-                            } catch (e: Exception) {
-                                withFrameNanos { }
-                                themeColor = selectedThemeColor
-                            }
-                        }
-                    } else {
-                        themeColor = selectedThemeColor
-                    }
-                }
-        }
+        val useDarkTheme = true
+        LaunchedEffect(Unit) { setSystemBarAppearance(true) }
+        val pureBlack = true
+        val themeColor = Color.White
 
         MetrolistTheme(
             darkTheme = useDarkTheme,
@@ -689,27 +576,7 @@ class MainActivity : FragmentActivity() {
             val containerSize = windowInfo.containerDpSize
             val smallestDimensionDp = minOf(containerSize.width, containerSize.height)
 
-            val landscapeDensityScale =
-                remember(smallestDimensionDp, enableLandscapeScaling) {
-                    if (enableLandscapeScaling) {
-                        when {
-                            smallestDimensionDp >= 840.dp -> 1.15f
-                            smallestDimensionDp >= 720.dp -> 1.1f
-                            smallestDimensionDp >= 600.dp -> 1.05f
-                            else -> 1.0f
-                        }
-                    } else {
-                        1.0f
-                    }
-                }
-            val scaledDensity: Density = remember(currentDensity, landscapeDensityScale, userDensityScale) {
-                Density(
-                    density = currentDensity.density * landscapeDensityScale * userDensityScale,
-                    fontScale = currentDensity.fontScale,
-                )
-            }
-
-            CompositionLocalProvider(LocalDensity provides scaledDensity) {
+            CompositionLocalProvider(LocalDensity provides currentDensity) {
             BoxWithConstraints(
                 modifier =
                     Modifier
@@ -738,15 +605,7 @@ class MainActivity : FragmentActivity() {
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val (previousTab, setPreviousTab) = rememberSaveable { mutableStateOf("home") }
 
-                val (listenTogetherInTopBar) = rememberPreference(ListenTogetherInTopBarKey, defaultValue = true)
-                val navigationItems =
-                    remember(listenTogetherInTopBar) {
-                        if (listenTogetherInTopBar) {
-                            Screens.MainScreens.filter { it != Screens.ListenTogether }
-                        } else {
-                            Screens.MainScreens
-                        }
-                    }
+                val navigationItems = Screens.MainScreens
                 val routeIndexMap = remember(navigationItems) {
                     navigationItems.mapIndexed { i, s -> s.route to i }.toMap()
                 }
@@ -775,7 +634,6 @@ class MainActivity : FragmentActivity() {
                         listOf(
                             Screens.Home.route,
                             Screens.Library.route,
-                            Screens.ListenTogether.route,
                             "settings",
                         )
                     }
@@ -969,14 +827,9 @@ class MainActivity : FragmentActivity() {
 
                 var shouldShowTopBar by rememberSaveable { mutableStateOf(false) }
 
-                LaunchedEffect(navBackStackEntry, listenTogetherInTopBar) {
+                LaunchedEffect(navBackStackEntry) {
                     val currentRoute = navBackStackEntry?.destination?.route
-                    val isListenTogetherScreen =
-                        currentRoute == Screens.ListenTogether.route ||
-                            currentRoute == "listen_together_from_topbar"
-                    shouldShowTopBar = currentRoute in topLevelScreens &&
-                        currentRoute != "settings" &&
-                        !(isListenTogetherScreen && listenTogetherInTopBar)
+                    shouldShowTopBar = currentRoute in topLevelScreens && currentRoute != "settings"
                 }
 
                 val coroutineScope = rememberCoroutineScope()
@@ -1016,7 +869,6 @@ class MainActivity : FragmentActivity() {
                             Screens.Home.route -> R.string.home
                             Screens.Search.route -> R.string.search
                             Screens.Library.route -> R.string.filter_library
-                            Screens.ListenTogether.route -> R.string.together
                             else -> null
                         }
                     }
@@ -1042,7 +894,6 @@ class MainActivity : FragmentActivity() {
                     LocalDownloadUtil provides downloadUtil,
                     LocalShimmerTheme provides ShimmerTheme,
                     LocalSyncUtils provides syncUtils,
-                    LocalListenTogetherManager provides listenTogetherManager,
                     LocalChangelogState provides showChangelog,
                     LocalArtistNameAliases provides artistNameAliases,
                 ) {
@@ -1080,14 +931,6 @@ class MainActivity : FragmentActivity() {
                                                     painter = painterResource(R.drawable.stats),
                                                     contentDescription = stringResource(R.string.stats),
                                                 )
-                                            }
-                                            if (listenTogetherInTopBar) {
-                                                IconButton(onClick = { navController.navigate("listen_together_from_topbar") }) {
-                                                    Icon(
-                                                        painter = painterResource(R.drawable.group_outlined),
-                                                        contentDescription = stringResource(R.string.together),
-                                                    )
-                                                }
                                             }
                                             IconButton(onClick = { showAccountDialog = true }) {
                                                 BadgedBox(badge = {
@@ -1201,7 +1044,7 @@ class MainActivity : FragmentActivity() {
                             // Pre-calculate values for graphicsLayer to avoid reading state during composition
                             val navBarTotalHeight = bottomInset + NavigationBarHeight
 
-                            if (!showRail && currentRoute != "wrapped") {
+                            if (!showRail) {
                                 Box {
                                     if (activePlayerConnection != null) {
                                         BottomSheetPlayer(
@@ -1264,14 +1107,12 @@ class MainActivity : FragmentActivity() {
                                     )
                                 }
                             } else {
-                                if (currentRoute != "wrapped") {
-                                    if (activePlayerConnection != null) {
-                                        BottomSheetPlayer(
-                                            state = playerBottomSheetState,
-                                            navController = navController,
-                                            pureBlack = pureBlack,
-                                        )
-                                    }
+                                if (activePlayerConnection != null) {
+                                    BottomSheetPlayer(
+                                        state = playerBottomSheetState,
+                                        navController = navController,
+                                        pureBlack = pureBlack,
+                                    )
                                 }
 
                                 Box(
@@ -1328,7 +1169,7 @@ class MainActivity : FragmentActivity() {
                                     }
                                 }
 
-                            if (showRail && currentRoute != "wrapped") {
+                            if (showRail) {
                                 AppNavigationRail(
                                     navigationItems = navigationItems,
                                     currentRoute = currentRoute,
@@ -1596,17 +1437,6 @@ class MainActivity : FragmentActivity() {
         intent.removeExtra(Intent.EXTRA_TEXT)
         val coroutineScope = lifecycle.coroutineScope
 
-        val listenCode =
-            uri.getQueryParameter("code")
-                ?: uri.getQueryParameter("room")
-                ?: uri.pathSegments.getOrNull(1)
-        val isListenLink = uri.pathSegments.firstOrNull() == "listen" || uri.host?.equals("listen", ignoreCase = true) == true
-        if (!listenCode.isNullOrBlank() && isListenLink) {
-            val username = dataStore.get(ListenTogetherUsernameKey, "").ifBlank { "Guest" }
-            listenTogetherManager.joinRoom(listenCode, username)
-            return
-        }
-
         when (val path = uri.pathSegments.firstOrNull()) {
             "playlist" -> {
                 val playlistId = uri.getQueryParameter("list")
@@ -1721,7 +1551,6 @@ val LocalPlayerConnection = staticCompositionLocalOf<PlayerConnection?> { error(
 val LocalPlayerAwareWindowInsets = compositionLocalOf<WindowInsets> { error("No WindowInsets provided") }
 val LocalDownloadUtil = staticCompositionLocalOf<DownloadUtil> { error("No DownloadUtil provided") }
 val LocalSyncUtils = staticCompositionLocalOf<SyncUtils> { error("No SyncUtils provided") }
-val LocalListenTogetherManager = staticCompositionLocalOf<com.metrolist.music.listentogether.ListenTogetherManager?> { null }
 val LocalChangelogState = staticCompositionLocalOf<MutableState<Boolean>> { error("No LocalChangelogState provided") }
 val LocalArtistNameAliases = staticCompositionLocalOf<Map<String, String>> { emptyMap() }
 val LocalIsPlayerExpanded = compositionLocalOf { false }

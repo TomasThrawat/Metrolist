@@ -15,8 +15,6 @@ import androidx.media3.datasource.cache.SimpleCache
 import com.metrolist.music.constants.MaxSongCacheSizeKey
 import com.metrolist.music.db.InternalDatabase
 import com.metrolist.music.db.MusicDatabase
-import com.metrolist.music.listentogether.ListenTogetherClient
-import com.metrolist.music.listentogether.ListenTogetherManager
 import com.metrolist.music.utils.dataStore
 import com.metrolist.music.utils.get
 import dagger.Module
@@ -95,16 +93,4 @@ object AppModule {
         databaseProvider,
     )
 
-    @Singleton
-    @Provides
-    fun provideListenTogetherClient(
-        @ApplicationContext context: Context,
-    ): ListenTogetherClient = ListenTogetherClient(context)
-
-    @Singleton
-    @Provides
-    fun provideListenTogetherManager(
-        @ApplicationContext context: Context,
-        client: ListenTogetherClient,
-    ): ListenTogetherManager = ListenTogetherManager(client, context)
 }

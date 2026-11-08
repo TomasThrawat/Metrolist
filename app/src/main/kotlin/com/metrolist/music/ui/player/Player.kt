@@ -35,7 +35,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -140,16 +139,13 @@ import coil3.request.allowHardware
 import coil3.toBitmap
 import com.metrolist.music.LocalDatabase
 import com.metrolist.music.LocalDownloadUtil
-import com.metrolist.music.LocalListenTogetherManager
 import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.R
 import com.metrolist.music.constants.CropAlbumArtKey
-import com.metrolist.music.constants.DarkModeKey
 import com.metrolist.music.constants.HidePlayerThumbnailKey
 import com.metrolist.music.constants.HideStatusBarOnFullscreenKey
 import com.metrolist.music.constants.KeepScreenOn
 import com.metrolist.music.constants.PlayerBackgroundStyle
-import com.metrolist.music.constants.PlayerBackgroundStyleKey
 import com.metrolist.music.constants.PlayerButtonsStyle
 import com.metrolist.music.constants.PlayerButtonsStyleKey
 import com.metrolist.music.constants.PlayerHorizontalPadding
@@ -166,7 +162,6 @@ import com.metrolist.music.db.entities.LyricsEntity
 import com.metrolist.music.extensions.metadata
 import com.metrolist.music.extensions.togglePlayPause
 import com.metrolist.music.extensions.toggleRepeatMode
-import com.metrolist.music.listentogether.RoomRole
 import com.metrolist.music.models.MediaMetadata
 import com.metrolist.music.ui.component.BottomSheet
 import com.metrolist.music.ui.component.BottomSheetState
@@ -179,7 +174,6 @@ import com.metrolist.music.ui.component.SquigglySlider
 import com.metrolist.music.ui.component.WavySlider
 import com.metrolist.music.ui.component.rememberBottomSheetState
 import com.metrolist.music.ui.menu.PlayerMenu
-import com.metrolist.music.ui.screens.settings.DarkMode
 import com.metrolist.music.ui.theme.PlayerColorExtractor
 import com.metrolist.music.ui.theme.PlayerSliderColors
 import com.metrolist.music.ui.utils.ShowMediaInfo
@@ -238,21 +232,13 @@ fun BottomSheetPlayer(
         mutableStateOf(false)
     }
 
-    val playerBackground by rememberEnumPreference(
-        key = PlayerBackgroundStyleKey,
-        defaultValue = PlayerBackgroundStyle.DEFAULT,
-    )
+    val playerBackground = PlayerBackgroundStyle.DEFAULT
     val playerButtonsStyle by rememberEnumPreference(
         key = PlayerButtonsStyleKey,
         defaultValue = PlayerButtonsStyle.DEFAULT,
     )
 
-    val isSystemInDarkTheme = isSystemInDarkTheme()
-    val darkTheme by rememberEnumPreference(DarkModeKey, defaultValue = DarkMode.AUTO)
-    val useDarkTheme =
-        remember(darkTheme, isSystemInDarkTheme) {
-            if (darkTheme == DarkMode.AUTO) isSystemInDarkTheme else darkTheme == DarkMode.ON
-        }
+    val useDarkTheme = true
 
     val shouldUseDarkButtonColors =
         remember(playerBackground, useDarkTheme) {
@@ -314,12 +300,7 @@ fun BottomSheetPlayer(
             PlayerBackgroundStyle.DEFAULT -> MaterialTheme.colorScheme.secondary
             else -> MaterialTheme.colorScheme.onSurface
         }
-    val useBlackBackground =
-        remember(isSystemInDarkTheme, darkTheme, pureBlack) {
-            val useDarkTheme =
-                if (darkTheme == DarkMode.AUTO) isSystemInDarkTheme else darkTheme == DarkMode.ON
-            useDarkTheme && pureBlack
-        }
+    val useBlackBackground = pureBlack
 
     val playbackState by playerConnection.playbackState.collectAsState()
     val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
@@ -333,10 +314,7 @@ fun BottomSheetPlayer(
     val sliderStyle by rememberEnumPreference(SliderStyleKey, SliderStyle.DEFAULT)
     val squigglySlider by rememberPreference(SquigglySliderKey, defaultValue = false)
 
-    // Listen Together state (reactive)
-    val listenTogetherManager = LocalListenTogetherManager.current
-    val listenTogetherRoleState = listenTogetherManager?.role?.collectAsStateWithLifecycle(initialValue = RoomRole.NONE)
-    val isListenTogetherGuest = listenTogetherRoleState?.value == RoomRole.GUEST
+    val isListenTogetherGuest = false
 
     // Cast state - safely access castConnectionHandler to prevent crashes during service lifecycle changes
     val castHandler =

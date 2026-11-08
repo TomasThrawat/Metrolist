@@ -28,7 +28,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.animateScrollBy
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -115,12 +114,10 @@ import coil3.request.ImageRequest
 import coil3.request.allowHardware
 import coil3.toBitmap
 import com.metrolist.music.LocalDatabase
-import com.metrolist.music.LocalListenTogetherManager
 import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.R
 import com.metrolist.music.constants.AiProviderKey
 import com.metrolist.music.constants.AiSystemPromptKey
-import com.metrolist.music.constants.DarkModeKey
 import com.metrolist.music.constants.DeeplApiKey
 import com.metrolist.music.constants.DeeplFormalityKey
 import com.metrolist.music.constants.LyricsAnimationStyle
@@ -138,7 +135,6 @@ import com.metrolist.music.constants.OpenRouterApiKey
 import com.metrolist.music.constants.OpenRouterBaseUrlKey
 import com.metrolist.music.constants.OpenRouterModelKey
 import com.metrolist.music.constants.PlayerBackgroundStyle
-import com.metrolist.music.constants.PlayerBackgroundStyleKey
 import com.metrolist.music.constants.TranslateLanguageKey
 import com.metrolist.music.constants.TranslateModeKey
 import com.metrolist.music.db.entities.LyricsEntity.Companion.LYRICS_NOT_FOUND
@@ -165,7 +161,6 @@ import com.metrolist.music.lyrics.LyricsUtils.romanizeKorean
 import com.metrolist.music.lyrics.lyricsTextLooksSynced
 import com.metrolist.music.ui.component.shimmer.ShimmerHost
 import com.metrolist.music.ui.component.shimmer.TextPlaceholder
-import com.metrolist.music.ui.screens.settings.DarkMode
 import com.metrolist.music.ui.screens.settings.LyricsPosition
 import com.metrolist.music.ui.screens.settings.defaultList
 import com.metrolist.music.ui.utils.fadingEdge
@@ -201,8 +196,7 @@ fun OriginalLyrics(
     val density = LocalDensity.current
     val context = LocalContext.current
     val configuration = LocalWindowInfo.current
-    val listenTogetherManager = LocalListenTogetherManager.current
-    val isGuest = listenTogetherManager?.isInRoom == true && !listenTogetherManager.isHost
+    val isGuest = false
     val shareLyricsStr = stringResource(R.string.share_lyrics)
     val failedToCreateImageTemplate = stringResource(R.string.failed_to_create_image)
 
@@ -234,17 +228,9 @@ fun OriginalLyrics(
     val currentSong by playerConnection.currentSong.collectAsStateWithLifecycle(initialValue = null)
     val lyrics = remember(lyricsEntity) { lyricsEntity?.lyrics?.trim() }
 
-    val playerBackground by rememberEnumPreference(
-        key = PlayerBackgroundStyleKey,
-        defaultValue = PlayerBackgroundStyle.DEFAULT,
-    )
+    val playerBackground = PlayerBackgroundStyle.DEFAULT
 
-    val darkTheme by rememberEnumPreference(DarkModeKey, defaultValue = DarkMode.AUTO)
-    val isSystemInDarkTheme = isSystemInDarkTheme()
-    val useDarkTheme =
-        remember(darkTheme, isSystemInDarkTheme) {
-            if (darkTheme == DarkMode.AUTO) isSystemInDarkTheme else darkTheme == DarkMode.ON
-        }
+    val useDarkTheme = true
 
     val decodedList =
         if (romanizeLyricsList.value.isEmpty()) {

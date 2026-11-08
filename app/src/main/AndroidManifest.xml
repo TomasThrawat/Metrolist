@@ -76,18 +76,6 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
 
-            <!-- Listen Together invite link -->
-            <intent-filter android:autoVerify="true">
-                <action android:name="android.intent.action.VIEW" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-
-                <data android:scheme="https" />
-                <data android:host="metrolist.cc" />
-                <data android:pathPrefix="/listen" />
-            </intent-filter>
-
             <!-- Youtube filter -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
@@ -190,23 +178,6 @@
             </intent-filter>
         </activity-alias>
 
-        <activity
-            android:name=".discord.DiscordOAuthActivity"
-            android:exported="true"
-            android:launchMode="singleTask"
-            android:theme="@style/Theme.AppCompat.NoActionBar">
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-
-                <data android:scheme="metrolistdiscord" />
-                <data android:host="oauth2" />
-                <data android:pathPrefix="/callback" />
-            </intent-filter>
-        </activity>
-
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.FileProvider"
@@ -251,11 +222,6 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </service>
-
-        <!-- Receiver for Listen Together notification actions (Approve/Reject) -->
-        <receiver
-            android:name=".listentogether.ListenTogetherActionReceiver"
-            android:exported="false" />
 
         <receiver
             android:name=".playback.alarm.MusicAlarmReceiver"

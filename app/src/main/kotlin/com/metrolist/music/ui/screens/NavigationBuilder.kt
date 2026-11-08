@@ -11,20 +11,16 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.dialog
 import androidx.navigation.navArgument
-import com.metrolist.music.constants.DarkModeKey
-import com.metrolist.music.constants.PureBlackKey
 import com.metrolist.music.ui.screens.artist.ArtistAlbumsScreen
 import com.metrolist.music.ui.screens.artist.ArtistItemsScreen
 import com.metrolist.music.ui.screens.artist.ArtistScreen
@@ -42,27 +38,19 @@ import com.metrolist.music.ui.screens.recognition.RecognitionHistoryScreen
 import com.metrolist.music.ui.screens.recognition.RecognitionScreen
 import com.metrolist.music.ui.screens.search.OnlineSearchResult
 import com.metrolist.music.ui.screens.search.SearchScreen
-import com.metrolist.music.ui.screens.settings.AboutScreen
 import com.metrolist.music.ui.screens.settings.AiSettings
 import com.metrolist.music.ui.screens.settings.AndroidAutoSettings
 import com.metrolist.music.ui.screens.settings.AppearanceSettings
-import com.metrolist.music.ui.screens.settings.BackupAndRestore
 import com.metrolist.music.ui.screens.settings.ContentSettings
-import com.metrolist.music.ui.screens.settings.DarkMode
 import com.metrolist.music.ui.screens.settings.PlayerSettings
 import com.metrolist.music.ui.screens.settings.PrivacySettings
 import com.metrolist.music.ui.screens.settings.RomanizationSettings
 import com.metrolist.music.ui.screens.settings.SettingsScreen
 import com.metrolist.music.ui.screens.settings.StorageSettings
-import com.metrolist.music.ui.screens.settings.ThemeScreen
 import com.metrolist.music.ui.screens.settings.UpdaterScreen
-import com.metrolist.music.ui.screens.settings.integrations.DiscordSettings
 import com.metrolist.music.ui.screens.settings.integrations.IntegrationScreen
 import com.metrolist.music.ui.screens.settings.integrations.LastFMSettings
-import com.metrolist.music.ui.screens.settings.integrations.ListenTogetherSettings
 
-import com.metrolist.music.ui.screens.wrapped.WrappedScreen
-import com.metrolist.music.utils.rememberEnumPreference
 import com.metrolist.music.utils.rememberPreference
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -78,17 +66,7 @@ fun NavGraphBuilder.navigationBuilder(
     }
 
     composable(Screens.Search.route) { backStackEntry ->
-        val pureBlackEnabled by rememberPreference(PureBlackKey, defaultValue = false)
-        val darkTheme by rememberEnumPreference(DarkModeKey, defaultValue = DarkMode.AUTO)
-        val isSystemInDarkTheme = isSystemInDarkTheme()
-        val useDarkTheme =
-            remember(darkTheme, isSystemInDarkTheme) {
-                if (darkTheme == DarkMode.AUTO) isSystemInDarkTheme else darkTheme == DarkMode.ON
-            }
-        val pureBlack =
-            remember(pureBlackEnabled, useDarkTheme) {
-                pureBlackEnabled && useDarkTheme
-            }
+        val pureBlack = true
         SearchScreen(
             pureBlack = pureBlack,
             savedStateHandle = backStackEntry.savedStateHandle
@@ -97,16 +75,6 @@ fun NavGraphBuilder.navigationBuilder(
 
     composable(Screens.Library.route) {
         LibraryScreen()
-    }
-
-    composable(Screens.ListenTogether.route) {
-        ListenTogetherScreen(navController, showTopBar = false)
-    }
-
-    composable(
-        route = "listen_together_from_topbar",
-    ) {
-        ListenTogetherScreen(navController, showTopBar = true)
     }
 
     composable("history") {
@@ -352,10 +320,6 @@ fun NavGraphBuilder.navigationBuilder(
         AppearanceSettings(navController, snackbarHostState)
     }
 
-    composable("settings/appearance/theme") {
-        ThemeScreen(navController)
-    }
-
     composable("settings/content") {
         ContentSettings(navController)
     }
@@ -380,32 +344,16 @@ fun NavGraphBuilder.navigationBuilder(
         PrivacySettings(navController)
     }
 
-    composable("settings/backup_restore") {
-        BackupAndRestore(navController)
-    }
-
     composable("settings/integrations") {
         IntegrationScreen(navController)
-    }
-
-    composable("settings/integrations/discord") {
-        DiscordSettings(navController)
     }
 
     composable("settings/integrations/lastfm") {
         LastFMSettings(navController)
     }
 
-    composable(route = "settings/integrations/listen_together") {
-        ListenTogetherSettings(navController)
-    }
-
     composable("settings/updater") {
         UpdaterScreen(navController)
-    }
-
-    composable("settings/about") {
-        AboutScreen(navController)
     }
 
     composable("login") {
@@ -417,10 +365,6 @@ fun NavGraphBuilder.navigationBuilder(
             navController = navController,
             isSwitchingChannel = true,
         )
-    }
-
-    composable("wrapped") {
-        WrappedScreen()
     }
 
     composable("equalizer") {
