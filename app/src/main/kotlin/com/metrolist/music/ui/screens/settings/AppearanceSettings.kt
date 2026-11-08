@@ -1437,7 +1437,7 @@ fun AppearanceSettings(
                         onClick = { onShowCachedPlaylistChange(!showCachedPlaylist) },
                     ),
                     Material3SettingsItem(
-                        icon = painterResource(R.drawable.backup),
+                        icon = painterResource(R.drawable.playlist_play),
                         title = { Text(stringResource(R.string.show_uploaded_playlist)) },
                         trailingContent = {
                             Switch(

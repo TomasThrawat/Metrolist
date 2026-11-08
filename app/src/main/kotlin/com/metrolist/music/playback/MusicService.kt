@@ -448,6 +448,7 @@ class MusicService :
 
     private var historyPaused = true
     private var historyDurationMs = 30_000L
+    private var lastPlaybackSpeed = 1.0f
 
     // Cached preferences to avoid runBlocking DataStore reads in hot paths
     @Volatile
